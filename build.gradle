@@ -1,0 +1,101 @@
+buildscript {
+    ext {
+        springBootVersion = "1.5.6.RELEASE"
+        generatedSourcesDir = file("${buildDir}/generated-sources")
+    }
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+        //springloaded: recompile when changes
+        classpath("org.springframework:springloaded:1.2.7.RELEASE")
+        //intellij enable "Build projects automatically" or assign "Rebuild" to save shortcut
+    }
+}
+
+apply plugin: "idea"
+apply plugin: "java"
+apply plugin: "war"
+apply plugin: "application"
+apply plugin: "jacoco" //junit code coverage
+apply plugin: "org.springframework.boot"
+
+//debug
+applicationDefaultJvmArgs = ["-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005"]
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+version = "1.4"
+war {
+    baseName = "spring-security-mysql-mongo"
+}
+
+//compile and notify springloaded when code change
+idea {
+    module {
+        inheritOutputDirs = false
+        outputDir = file("$buildDir/classes/main/") //move compiled changes to folder where springloaded can watch them
+        testOutputDir = file("$buildDir/classes/test/") //not create extra folder like out or classes
+    }
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir generatedSourcesDir //allow to import generated sources
+        }
+    }
+}
+
+compileJava {
+    //delete and create generatedSourcesDir folder
+    doFirst {
+        delete generatedSourcesDir
+        generatedSourcesDir.mkdirs()
+    }
+    //create querydsl
+    options.compilerArgs += ["-s", generatedSourcesDir]
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    //for rest
+    compile("org.springframework.boot:spring-boot-starter-web:${springBootVersion}")
+    compile("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.0") //serialize LocalDateTime
+
+    //for security  
+    compile("org.springframework.boot:spring-boot-starter-security:${springBootVersion}")
+    compile("io.jsonwebtoken:jjwt:0.7.0") //json web token
+    compile("commons-codec:commons-codec:1.10") //hash
+
+    //for setter and getter annotations
+    compile("org.projectlombok:lombok:1.16.18")
+
+    //for swagger REST documentation
+    compile("io.springfox:springfox-swagger2:2.7.0")
+    compile("io.springfox:springfox-bean-validators:2.7.0") //swagger use javax.validation in doc
+    compile("io.springfox:springfox-swagger-ui:2.7.0") //create swagger-ui.html page
+
+    //querydsl
+    compile("com.querydsl:querydsl-jpa:4.1.4")
+    compile("com.querydsl:querydsl-mongodb:4.1.4")
+    compile("com.querydsl:querydsl-apt:4.1.4:jpa")
+
+    //jpa
+    compile("org.springframework.boot:spring-boot-starter-data-jpa:${springBootVersion}")
+    compile("com.h2database:h2:1.4.196")
+    compile("mysql:mysql-connector-java:6.0.6")
+
+    //mongodb
+    compile("org.springframework.boot:spring-boot-starter-data-mongodb:${springBootVersion}")
+
+    //providedRuntime is needed where you want to compile a war
+    providedRuntime("org.springframework.boot:spring-boot-starter-tomcat:${springBootVersion}")
+
+    //test
+    testCompile("org.springframework.boot:spring-boot-starter-test:${springBootVersion}")
+}
